@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI PhotoMaker - حوّل صورك بالذكاء الاصطناعي</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #7c3aed;
+    --primary-light: #a78bfa;
+    --accent: #06b6d4;
+    --accent2: #f0abfc;
+    --dark: #030712;
+    --dark2: #0f0f1a;
+    --dark3: #1a1a2e;
+    --text: #f1f5f9;
+    --text-muted: #94a3b8;
+    --glow: 0 0 40px rgba(124,58,237,0.4);
+    --glow2: 0 0 40px rgba(6,182,212,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', sans-serif;
+    background: var(--dark);
+    color: var(--text);
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    width: 20px; height: 20px;
+    border: 2px solid var(--primary-light);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+    transition: transform 0.1s;
+    mix-blend-mode: difference;
+  }
+  .cursor-dot {
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    position: fixed;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* Stars background */
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--d, 3s) infinite;
+  }
+  @keyframes twinkle {
+    0%, 100% { opacity: 0.1; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.5); }
+  }
+
+  /* Grid lines */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,58,237,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,58,237,0.05) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* Glow orbs */
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+    animation: float 8s ease-in-out infinite;
+  }
+  .orb-1 { width: 500px; height: 500px; background: rgba(124,58,237,0.15); top: -200px; right: -100px; animation-delay: 0s; }
+  .orb-2 { width: 400px; height: 400px; background: rgba(6,182,212,0.1); bottom: -100px; left: -100px; animation-delay: 3s; }
+  .orb-3 { width: 300px; height: 300px; background: rgba(240,171,252,0.08); top: 50%; left: 50%; animation-delay: 6s; }
+
+  @keyframes float {
+    0%, 100% { transform: translate(0, 0); }
+    50% { transform: translate(30px, -30px); }
+  }
+
+  /* Navbar */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 16px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(3,7,18,0.8);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(124,58,237,0.2);
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .nav-logo img {
+    width: 42px; height: 42px;
+    border-radius: 50%;
+    border: 2px solid var(--primary);
+    box-shadow: var(--glow);
+  }
+
+  .nav-logo-text {
+    font-family: 'Orbitron', monospace;
+    font-size: 16px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-light), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: 1px;
+  }
+
+  .nav-btn {
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 50px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    box-shadow: var(--glow);
+  }
+  .nav-btn:hover { transform: scale(1.05); box-shadow: 0 0 60px rgba(124,58,237,0.6); }
+
+  /* Main content */
+  main { position: relative; z-index: 1; }
+
+  /* Hero */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 100px 20px 60px;
+    text-align: center;
+  }
+
+  .hero-inner { max-width: 800px; }
+
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(124,58,237,0.15);
+    border: 1px solid rgba(124,58,237,0.4);
+    color: var(--primary-light);
+    padding: 8px 20px;
+    border-radius: 50px;
+    font-size: 13px;
+    margin-bottom: 30px;
+    animation: fadeInDown 0.8s ease;
+  }
+
+  .badge-dot {
+    width: 8px; height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .hero-logo {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    border: 3px solid var(--primary);
+    box-shadow: var(--glow), 0 0 80px rgba(124,58,237,0.3);
+    margin: 0 auto 30px;
+    animation: fadeInDown 0.8s ease 0.1s both, logoGlow 3s ease-in-out infinite;
+    display: block;
+  }
+  @keyframes logoGlow {
+    0%, 100% { box-shadow: var(--glow), 0 0 80px rgba(124,58,237,0.3); }
+    50% { box-shadow: 0 0 60px rgba(124,58,237,0.8), 0 0 120px rgba(6,182,212,0.4); }
+  }
+
+  .hero h1 {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(32px, 6vw, 64px);
+    font-weight: 900;
+    line-height: 1.2;
+    margin-bottom: 20px;
+    animation: fadeInUp 0.8s ease 0.2s both;
+  }
+
+  .hero h1 .line1 {
+    display: block;
+    background: linear-gradient(135deg, #fff, var(--primary-light));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero h1 .line2 {
+    display: block;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .hero-sub {
+    font-size: clamp(15px, 2.5vw, 18px);
+    color: var(--text-muted);
+    line-height: 1.8;
+    margin-bottom: 40px;
+    animation: fadeInUp 0.8s ease 0.3s both;
+  }
+
+  .hero-sub span { color: var(--primary-light); font-weight: 600; }
+
+  .hero-cta {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    animation: fadeInUp 0.8s ease 0.4s both;
+  }
+
+  .btn-main {
+    background: linear-gradient(135deg, var(--primary), #5b21b6);
+    color: white;
+    border: none;
+    padding: 16px 36px;
+    border-radius: 50px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    box-shadow: var(--glow);
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-main::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .btn-main:hover { transform: translateY(-3px); box-shadow: 0 0 60px rgba(124,58,237,0.7); }
+  .btn-main:hover::before { opacity: 1; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--primary-light);
+    border: 1px solid rgba(124,58,237,0.5);
+    padding: 16px 36px;
+    border-radius: 50px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+    backdrop-filter: blur(10px);
+  }
+  .btn-outline:hover { border-color: var(--primary); background: rgba(124,58,237,0.1); transform: translateY(-3px); }
+
+  /* Upload section */
+  .upload-section {
+    padding: 80px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .section-label {
+    text-align: center;
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 4px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .section-title {
+    text-align: center;
+    font-size: clamp(24px, 4vw, 40px);
+    font-weight: 700;
+    margin-bottom: 50px;
+    background: linear-gradient(135deg, #fff, var(--text-muted));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .upload-card {
+    background: rgba(15,15,26,0.8);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 24px;
+    padding: 40px;
+    backdrop-filter: blur(20px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+    transition: border-color 0.3s;
+  }
+  .upload-card:hover { border-color: rgba(124,58,237,0.6); }
+
+  .drop-zone {
+    border: 2px dashed rgba(124,58,237,0.4);
+    border-radius: 16px;
+    padding: 50px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+    background: rgba(124,58,237,0.03);
+  }
+  .drop-zone:hover, .drop-zone.dragover {
+    border-color: var(--primary);
+    background: rgba(124,58,237,0.08);
+    box-shadow: inset 0 0 40px rgba(124,58,237,0.05);
+  }
+
+  .drop-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    display: block;
+    filter: drop-shadow(0 0 20px rgba(124,58,237,0.5));
+  }
+
+  .drop-text { color: var(--text-muted); font-size: 15px; margin-bottom: 8px; }
+  .drop-hint { color: rgba(148,163,184,0.5); font-size: 13px; }
+  .drop-text span { color: var(--primary-light); font-weight: 600; cursor: pointer; }
+
+  #file-input { display: none; }
+
+  /* Preview grid */
+  .preview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 12px;
+    margin-top: 20px;
+  }
+
+  .preview-item {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    border: 1px solid rgba(124,58,237,0.3);
+  }
+
+  .preview-item img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  .preview-item .remove-btn {
+    position: absolute;
+    top: 4px; left: 4px;
+    width: 22px; height: 22px;
+    background: rgba(239,68,68,0.9);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Prompt */
+  .prompt-section { margin-top: 28px; }
+
+  .prompt-label {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .prompt-input {
+    width: 100%;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 12px;
+    padding: 16px;
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    font-size: 15px;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.3s;
+    outline: none;
+  }
+  .prompt-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(124,58,237,0.1); }
+  .prompt-input::placeholder { color: rgba(148,163,184,0.4); }
+
+  .submit-btn {
+    width: 100%;
+    margin-top: 20px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    color: white;
+    border: none;
+    padding: 18px;
+    border-radius: 12px;
+    font-family: 'Cairo', sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: var(--glow);
+    position: relative;
+    overflow: hidden;
+  }
+  .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 0 60px rgba(124,58,237,0.6); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Result card */
+  .result-card {
+    display: none;
+    margin-top: 30px;
+    background: rgba(15,15,26,0.9);
+    border: 1px solid rgba(6,182,212,0.4);
+    border-radius: 20px;
+    padding: 32px;
+    text-align: center;
+    animation: fadeInUp 0.5s ease;
+  }
+  .result-card.show { display: block; }
+
+  .result-icon { font-size: 48px; margin-bottom: 16px; display: block; }
+
+  .result-title {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--accent);
+  }
+
+  .result-text {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.8;
+    margin-bottom: 24px;
+  }
+
+  .tg-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: white;
+    text-decoration: none;
+    padding: 14px 30px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 700;
+    transition: all 0.3s;
+    box-shadow: 0 0 30px rgba(37,99,235,0.4);
+  }
+  .tg-btn:hover { transform: translateY(-3px); box-shadow: 0 0 50px rgba(37,99,235,0.6); }
+
+  /* Stats */
+  .stats-section {
+    padding: 60px 20px;
+    max-width: 900px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+
+  .stat-card {
+    background: rgba(15,15,26,0.8);
+    border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 20px;
+    padding: 30px 20px;
+    text-align: center;
+    transition: all 0.3s;
+    backdrop-filter: blur(10px);
+  }
+  .stat-card:hover { border-color: rgba(124,58,237,0.5); transform: translateY(-5px); }
+
+  .stat-num {
+    font-family: 'Orbitron', monospace;
+    font-size: 36px;
+    font-weight: 900;
+    background: linear-gradient(135deg, var(--primary-light), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  .stat-label { color: var(--text-muted); font-size: 14px; }
+
+  /* Features */
+  .features-section {
+    padding: 60px 20px 100px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+  }
+
+  .feature-card {
+    background: rgba(15,15,26,0.8);
+    border: 1px solid rgba(124,58,237,0.15);
+    border-radius: 20px;
+    padding: 28px;
+    transition: all 0.3s;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feature-card:hover { border-color: rgba(124,58,237,0.4); transform: translateY(-5px); }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon { font-size: 32px; margin-bottom: 14px; display: block; }
+  .feature-title { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+  .feature-desc { color: var(--text-muted); font-size: 14px; line-height: 1.7; }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: rgba(148,163,184,0.4);
+    font-size: 13px;
+    border-top: 1px solid rgba(124,58,237,0.1);
+    position: relative;
+    z-index: 1;
+  }
+
+  footer span { color: var(--primary-light); }
+
+  /* Animations */
+  @keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Maintenance overlay */
+  .maintenance-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(3,7,18,0.95);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+  }
+  .maintenance-overlay.show { display: flex; }
+
+  .maintenance-box {
+    background: rgba(15,15,26,0.95);
+    border: 1px solid rgba(6,182,212,0.4);
+    border-radius: 24px;
+    padding: 50px 40px;
+    text-align: center;
+    max-width: 500px;
+    width: 90%;
+    animation: fadeInUp 0.5s ease;
+    box-shadow: 0 0 80px rgba(6,182,212,0.2);
+  }
+
+  .maintenance-icon { font-size: 64px; display: block; margin-bottom: 20px; }
+  .maintenance-title { font-size: 24px; font-weight: 700; margin-bottom: 12px; color: var(--accent); }
+  .maintenance-text { color: var(--text-muted); line-height: 1.8; margin-bottom: 30px; font-size: 15px; }
+
+  @media (max-width: 600px) {
+    nav { padding: 12px 20px; }
+    .stats-section { grid-template-columns: 1fr; }
+    .upload-card { padding: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-dot" id="cursorDot"></div>
+
+<div class="stars" id="stars"></div>
+<div class="grid-bg"></div>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- Maintenance Overlay -->
+<div class="maintenance-overlay" id="maintenanceOverlay">
+  <div class="maintenance-box">
+    <span class="maintenance-icon">🔧</span>
+    <div class="maintenance-title">الموقع تحت الصيانة</div>
+    <div class="maintenance-text">
+      نعمل على تحسين تجربتك!<br>
+      يمكنك إنشاء صورتك الآن عبر بوتنا على تيليجرام مباشرةً ⚡
+    </div>
+    <a href="https://t.me/Ai_PhotoMakerx_bot" class="tg-btn" target="_blank">
+      ✈️ &nbsp; انتقل للبوت الآن
+    </a>
+    <br><br>
+    <button onclick="document.getElementById('maintenanceOverlay').classList.remove('show')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-family:Cairo,sans-serif;font-size:14px;">
+      إغلاق
+    </button>
+  </div>
+</div>
+
+<nav>
+  <div class="nav-logo">
+    <img src="logo.png" alt="AI PhotoMaker" onerror="this.style.display='none'">
+    <span class="nav-logo-text">AI PHOTOMAKER</span>
+  </div>
+  <a href="https://t.me/Ai_PhotoMakerx_bot" class="nav-btn" target="_blank">✈️ ابدأ الآن</a>
+</nav>
+
+<main>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-badge">
+        <span class="badge-dot"></span>
+        تقنية ذكاء اصطناعي متطورة
+      </div>
+      <img src="logo.png" alt="AI PhotoMaker" class="hero-logo" id="heroLogo">
+      <h1>
+        <span class="line1">حوّل صورك إلى</span>
+        <span class="line2">تحفة فنية ✨</span>
+      </h1>
+      <p class="hero-sub">
+        ارفع <span>صورة أو أكثر</span>، اكتب ما تريد،<br>
+        واستلم نتيجة مذهلة خلال <span>دقائق فقط</span>
+      </p>
+      <div class="hero-cta">
+        <a href="#upload" class="btn-main">🎨 جرّب الآن مجاناً</a>
+        <a href="https://t.me/Ai_PhotoMakerx_bot" class="btn-outline" target="_blank">✈️ فتح البوت</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <span class="stat-num">+5K</span>
+      <span class="stat-label">صورة مُنشأة</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num">&lt;5</span>
+      <span class="stat-label">دقائق لكل صورة</span>
+    </div>
+    <div class="stat-card">
+      <span class="stat-num">9</span>
+      <span class="stat-label">صور مرجعية بنفس الوقت</span>
+    </div>
+  </div>
+
+  <!-- Upload -->
+  <section class="upload-section" id="upload">
+    <div class="section-label">ابدأ الآن</div>
+    <h2 class="section-title">أنشئ صورتك</h2>
+
+    <div class="upload-card">
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="file-input" accept="image/*" multiple>
+        <span class="drop-icon">🖼️</span>
+        <p class="drop-text">اسحب صورك هنا أو <span onclick="document.getElementById('file-input').click()">اختر من جهازك</span></p>
+        <p class="drop-hint">PNG, JPG — حتى 9 صور</p>
+      </div>
+
+      <div class="preview-grid" id="previewGrid"></div>
+
+      <div class="prompt-section">
+        <div class="prompt-label">✏️ اكتب التعديل المطلوب</div>
+        <textarea class="prompt-input" id="promptInput" placeholder="مثال: غيّر لون الشعر إلى أحمر، أضف وشماً على الذراع، اجعل الصورة بأسلوب أنمي..."></textarea>
+      </div>
+
+      <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">
+        🚀 &nbsp; إنشاء الصورة
+      </button>
+
+      <div class="result-card" id="resultCard">
+        <span class="result-icon">🔧</span>
+        <div class="result-title">الموقع تحت الصيانة مؤقتاً</div>
+        <div class="result-text">
+          نعمل على تطوير الموقع لتجربة أفضل!<br>
+          يمكنك إنشاء صورتك الآن عبر بوتنا على تيليجرام مباشرةً ⚡
+        </div>
+        <a href="https://t.me/Ai_PhotoMakerx_bot" class="tg-btn" target="_blank">
+          ✈️ &nbsp; انتقل للبوت وأنشئ صورتك
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features-section">
+    <div class="section-label">إمكانياتك لا حدود لها</div>
+    <h2 class="section-title">ماذا يمكنك فعله؟</h2>
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">👤</span>
+        <div class="feature-title">تعديل ملامح الوجه</div>
+        <div class="feature-desc">تصغير الأنف، تكبير الشفاه، تغيير لون العيون بدقة مذهلة</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">💪</span>
+        <div class="feature-title">نحت الجسم</div>
+        <div class="feature-desc">إضافة عضلات، تنسيق القوام، وتحقيق الإطلالة المثالية</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">💇</span>
+        <div class="feature-title">تغيير المظهر</div>
+        <div class="feature-desc">شعر، وشم، بيرسينق، وأي تغيير تتخيله</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">👔</span>
+        <div class="feature-title">الأناقة الكاملة</div>
+        <div class="feature-desc">بدّل ملابسك واختر من أرقى الستايلات العالمية</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🎨</span>
+        <div class="feature-title">تغيير الأسلوب</div>
+        <div class="feature-desc">أنمي، رسم زيتي، فوتوغرافي واقعي، وأكثر</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">⚡</span>
+        <div class="feature-title">نتيجة فورية</div>
+        <div class="feature-desc">استلم صورتك المعدلة خلال أقل من 5 دقائق</div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  جميع الحقوق محفوظة &copy; 2026 <span>AI PhotoMaker</span>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const dot = document.getElementById('cursorDot');
+  document.addEventListener('mousemove', e => {
+    cursor.style.left = e.clientX - 10 + 'px';
+    cursor.style.top = e.clientY - 10 + 'px';
+    dot.style.left = e.clientX - 3 + 'px';
+    dot.style.top = e.clientY - 3 + 'px';
+  });
+
+  // Stars
+  const starsEl = document.getElementById('stars');
+  for (let i = 0; i < 150; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    const size = Math.random() * 2.5 + 0.5;
+    s.style.cssText = ;
+    starsEl.appendChild(s);
+  }
+
+  // Logo base64
+  const logoB64 = "";
+  document.getElementById('heroLogo').src = "logo.png";
+  document.querySelector('.nav-logo img').src = "logo.png";
+
+  // File upload
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('file-input');
+  const previewGrid = document.getElementById('previewGrid');
+  let files = [];
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    addFiles(Array.from(e.dataTransfer.files));
+  });
+  fileInput.addEventListener('change', e => addFiles(Array.from(e.target.files)));
+
+  function addFiles(newFiles) {
+    newFiles.forEach(f => {
+      if (!f.type.startsWith('image/')) return;
+      if (files.length >= 9) return;
+      files.push(f);
+    });
+    renderPreviews();
+  }
+
+  function renderPreviews() {
+    previewGrid.innerHTML = '';
+    files.forEach((f, i) => {
+      const div = document.createElement('div');
+      div.className = 'preview-item';
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(f);
+      const btn = document.createElement('button');
+      btn.className = 'remove-btn';
+      btn.innerHTML = '✕';
+      btn.onclick = () => { files.splice(i, 1); renderPreviews(); };
+      div.appendChild(img);
+      div.appendChild(btn);
+      previewGrid.appendChild(div);
+    });
+  }
+
+  async function handleSubmit() {
+    const prompt = document.getElementById('promptInput').value.trim();
+    if (files.length === 0) { alert('الرجاء رفع صورة واحدة على الأقل'); return; }
+    if (!prompt) { alert('الرجاء كتابة التعديل المطلوب'); return; }
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳  جارٍ الإرسال...';
+
+    // تحويل الصور إلى base64
+    const imagesB64 = await Promise.all(files.map(f => {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(f);
+      });
+    }));
+
+    try {
+      await fetch('/.netlify/functions/send-to-bot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: imagesB64, prompt })
+      });
+    } catch(e) {
+      console.log('Send error:', e);
+    }
+
+    // إظهار رسالة الصيانة
+    document.getElementById('resultCard').classList.add('show');
+    btn.disabled = false;
+    btn.textContent = '🚀   إنشاء الصورة';
+    document.getElementById('resultCard').scrollIntoView({ behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
